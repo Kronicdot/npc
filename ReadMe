@@ -1,0 +1,442 @@
+# Nurturing Personal Companion (NPC)
+
+## Overview
+
+Nurturing Personal Companion (NPC) is a privacy-focused, browser-based Progressive Web App (PWA) designed to act as an empathetic daily companion for active seniors. The app is built to support independence, reduce loneliness, and help with memory, daily routines, and emotional well-being.
+
+NPC is intended to run primarily in the browser and be installable to a phone or tablet home screen without requiring an app store. The design emphasizes simplicity, accessibility, large readable interface elements, offline-first functionality, and optional online AI features.
+
+## Vision
+
+The goal of NPC is to provide a gentle, supportive, low-friction digital companion that can:
+
+* Check in with users daily
+* Track notes, reminders, hydration, and mood
+* Offer kind and empathetic conversation
+* Help reinforce routines without feeling clinical
+* Respect user privacy by keeping sensitive data on-device whenever possible
+
+## Target Audience
+
+NPC is designed for active seniors, especially those who:
+
+* Want help remembering daily routines
+* May feel isolated and benefit from a compassionate companion
+* Prefer large buttons, voice interaction, and simple navigation
+* Do not want the complexity of installing or managing a traditional mobile app
+
+Initial target communities are active seniors in Jacksonville, Florida, though the system should be flexible enough to expand beyond that audience.
+
+## Core Product Goals
+
+### 1. Privacy First
+
+* All sensitive notes, reminders, health logs, and conversation history remain on-device by default
+* No required cloud account for core usage
+* Online AI calls are optional and should be anonymized where possible
+* Any family sync or external sharing must be opt-in and encrypted
+
+### 2. Offline First
+
+* The app should remain useful even without internet access
+* Core functionality such as reminders, logs, notes, and cached conversation history should work offline
+* Service worker caching should support installable PWA behavior
+
+### 3. Senior-Friendly Design
+
+* Large readable fonts
+* High contrast theme options
+* Large tap targets and simple navigation
+* Voice-first options where supported
+* Minimal technical barriers and clear language
+
+### 4. Compassionate AI Support
+
+* AI should be used to provide empathetic replies, gentle suggestions, and supportive daily engagement
+* The experience should feel calm, respectful, and non-judgmental
+* Offline fallback rules should provide basic support when internet is unavailable
+
+## Proposed Tech Stack
+
+### Frontend Runtime
+
+* Pyodide for running Python in the browser
+* Python-driven UI logic wherever practical
+
+### UI Framework
+
+* pyTincture with DHTMLX widget integration
+* Senior-friendly layout customizations for large text, readable cards, simple forms, and voice hooks
+
+### Local Data Storage
+
+* IndexedDB for durable browser storage
+* DuckDB-WASM for structured local data queries and reporting
+
+### AI Integration
+
+* xAI Grok API through a secure relay service
+* Online-only for empathetic response generation, suggestion generation, and note processing
+* Offline fallback using local rules and cached prompts
+
+### Deployment
+
+* HTTPS-hosted PWA shell
+* Installable on mobile home screens
+* Service worker for caching and offline functionality
+
+## Core Features
+
+### Daily Check-In
+
+The user should be able to complete a simple daily check-in that asks questions like:
+
+* How are you feeling today?
+* Did you take your medication?
+* Have you had water recently?
+* Would you like to leave a note or voice message?
+
+### Reminders
+
+NPC should support:
+
+* Medication reminders
+* Hydration reminders
+* Appointment reminders
+* General daily routine reminders
+* Read-aloud reminder support
+* Snooze and complete actions
+
+### Notes and Memory Support
+
+* Quick notes
+* Voice notes with optional transcription
+* Searchable reminders and notes
+* Historical logs for past entries
+
+### Companion Chat
+
+* Calm, friendly conversational interface
+* Online AI responses when available
+* Offline fallback responses when offline
+* Conversation history saved locally
+
+### Mood and Well-Being Tracking
+
+* Mood selection during check-ins
+* Light sentiment tagging from text or voice note input
+* Trend view over time
+* Gentle prompt suggestions based on repeated low mood signals
+
+### Cognitive Support
+
+* Gentle memory prompts
+* Optional daily questions
+* Light activity prompts such as stretching, hydration, breathing, or journaling
+* Optional brain-engagement prompts such as simple reflections or recall questions
+
+### Accessibility Features
+
+* Large text mode
+* High contrast mode
+* Voice input when supported
+* Speech synthesis read-back
+* Minimal-step navigation
+* Clear error states and simple wording
+
+## Security and Privacy Model
+
+### Data Protection
+
+* Store personal data locally by default
+* Encrypt sensitive data before writing to browser storage
+* Require explicit consent before any online processing
+
+### Network Safety
+
+* HTTPS only
+* Content Security Policy headers
+* No dynamic eval usage
+* Parameterized query patterns where relevant
+
+### Authentication
+
+Optional lightweight security may include:
+
+* Simple PIN unlock
+* Browser biometric support when available
+* Optional family access or sync only with explicit consent
+
+## Recommended App Sections
+
+### Home / Today
+
+A simple dashboard showing:
+
+* Greeting
+* Today’s reminders
+* Mood check-in button
+* Water tracker
+* Notes shortcut
+* Chat shortcut
+
+### Reminders
+
+A dedicated section for:
+
+* Today’s reminders
+* Upcoming reminders
+* Create / edit reminder
+* Mark done / snooze
+
+### Notes
+
+A section for:
+
+* Text notes
+* Voice notes
+* Search and filter
+* Timeline of entries
+
+### Check-In
+
+A short daily flow for mood, hydration, meds, and optional note input.
+
+### Companion Chat
+
+A supportive conversation page with clear online/offline state.
+
+### Settings
+
+A simple settings area for:
+
+* Font size
+* Theme contrast
+* Reminder defaults
+* Voice settings
+* PIN/privacy settings
+* AI consent settings
+
+## Suggested Project Structure
+
+```text
+npc/
+├── index.html
+├── manifest.json
+├── service-worker.js
+├── assets/
+│   ├── icons/
+│   ├── audio/
+│   └── styles/
+├── py/
+│   ├── app.py
+│   ├── ui/
+│   │   ├── home.py
+│   │   ├── reminders.py
+│   │   ├── notes.py
+│   │   ├── checkin.py
+│   │   ├── chat.py
+│   │   └── settings.py
+│   ├── storage/
+│   │   ├── db.py
+│   │   ├── models.py
+│   │   └── encryption.py
+│   ├── ai/
+│   │   ├── grok_client.py
+│   │   ├── offline_rules.py
+│   │   └── prompt_builder.py
+│   ├── accessibility/
+│   │   ├── speech.py
+│   │   └── theme.py
+│   └── utils/
+│       ├── time_helpers.py
+│       └── validation.py
+├── backend/
+│   └── api-relay/
+│       ├── main.py
+│       └── env.example
+└── README.md
+```
+
+## MVP Scope
+
+The first working version should focus on the smallest set of features that prove the concept.
+
+### MVP Features
+
+* Installable PWA shell
+* Daily check-in form
+* Reminder creation and completion
+* Local notes storage
+* Local hydration log
+* Companion chat UI
+* Offline fallback behavior
+* Optional Grok integration through secure relay
+* Large text and high contrast support
+
+### Out of Scope for MVP
+
+* Full family dashboard
+* Advanced analytics
+* Multi-user cloud sync
+* Complex medical workflows
+* Emergency alerting system
+* Full voice transcription pipeline beyond simple browser support
+
+## Success Criteria
+
+NPC MVP is successful if:
+
+* A senior can open it and understand the home screen without training
+* The app works offline for notes, reminders, and logs
+* Text is easy to read and controls are easy to tap
+* The user can complete a daily check-in in under one minute
+* The app can deliver a calm, helpful companion experience
+* Privacy settings are understandable and trustworthy
+
+## Future Expansion Ideas
+
+* Family sync dashboard with consent controls
+* Exportable health and mood summaries
+* Caregiver alerts for missed check-ins
+* Routine learning and adaptive reminder timing
+* Smarter local-only sentiment support
+* Calendar integration
+* Guided wellness routines
+* Larger tablet-first layout
+
+## Development Notes
+
+This project should be built with the simplest reliable path first. Accessibility, clarity, and stability matter more than flashy features. The companion must feel trustworthy, gentle, and easy to use.
+
+---
+
+# What Needs To Be Done
+
+## Phase 1: Planning and Validation
+
+* Finalize MVP feature list
+* Confirm whether pyTincture is the right UI framework for accessibility and browser support
+* Decide how much voice support is required for MVP
+* Confirm local-only data model
+* Decide what AI tasks are allowed online
+* Define privacy and consent wording
+
+## Phase 2: Base Project Setup
+
+* Create project folder structure
+* Build the HTML shell for the PWA
+* Add manifest.json and installable app metadata
+* Add service worker for offline caching
+* Load Pyodide successfully in browser
+* Confirm Python package loading strategy with micropip
+
+## Phase 3: Local Storage Foundation
+
+* Integrate IndexedDB storage layer
+* Connect DuckDB-WASM for structured local queries
+* Define database schema for reminders, notes, hydration logs, mood check-ins, and settings
+* Add local backup/export strategy
+* Add encryption helper for sensitive data
+
+## Phase 4: Core UI Development
+
+* Build Today screen
+* Build Check-In screen
+* Build Reminders screen
+* Build Notes screen
+* Build Companion Chat screen
+* Build Settings screen
+* Add large text mode and high contrast mode
+* Add large-button mobile layout testing
+
+## Phase 5: Reminder and Routine Engine
+
+* Create reminder creation/edit flow
+* Add repeat schedules
+* Add done and snooze actions
+* Add hydration tracking
+* Add medication tracking flags
+* Add daily prompt scheduling
+* Add read-aloud reminder support
+
+## Phase 6: Companion Logic
+
+* Create offline fallback response rules
+* Build local prompt templates for empathy and routine support
+* Add local conversation history storage
+* Add daily greeting logic
+* Add mood-based prompt suggestions
+
+## Phase 7: Online AI Integration
+
+* Build secure relay for Grok API requests
+* Add anonymization/redaction layer before sending text
+* Add consent check before online calls
+* Add online/offline indicator in UI
+* Add graceful fallback when API is unavailable
+
+## Phase 8: Voice and Accessibility
+
+* Add speech synthesis read-back
+* Add browser voice input support where available
+* Add clear non-voice fallback paths
+* Test large font and contrast modes
+* Test tap target sizes and screen readability
+* Simplify navigation labels for senior users
+
+## Phase 9: Security and Privacy
+
+* Add HTTPS-only deployment
+* Configure CSP headers
+* Add secure handling of API keys on backend relay
+* Add local PIN protection if desired
+* Encrypt sensitive stored data
+* Add consent screens and privacy explanations
+
+## Phase 10: Testing
+
+* Test on Android browsers
+* Test on iPhone Safari PWA install flow
+* Test offline behavior fully
+* Test older devices for performance
+* Test reminder reliability after reload/reopen
+* Test with real users for readability and ease of use
+
+## Phase 11: Launch Preparation
+
+* Write onboarding copy
+* Write privacy policy and consent language
+* Create icon set and polished branding
+* Prepare deployment hosting
+* Verify installability and caching
+* Document setup and maintenance
+
+## Priority Order
+
+1. Define MVP clearly
+2. Get PWA shell running
+3. Set up local storage
+4. Build Today, Check-In, Reminders, Notes
+5. Add offline companion logic
+6. Add accessibility improvements
+7. Add Grok relay integration
+8. Test on phones and tablets
+9. Polish and launch
+
+## Biggest Risks to Solve Early
+
+* pyTincture compatibility and accessibility fit
+* Browser voice input limitations
+* PWA notification/reminder behavior on mobile
+* Secure AI integration without exposing API keys
+* Making the UI simple enough for real senior adoption
+
+## Recommended Immediate Next Steps
+
+* Write the final MVP feature list
+* Build the base PWA shell
+* Test Pyodide loading in browser
+* Build one working Today screen
+* Add one reminder flow and one daily check-in flow
+* Validate the UI with large-font mobile testing
