@@ -1,0 +1,10 @@
+{
+  "name": "NPC Companion",
+  "short_name": "NPC",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#182338",
+  "theme_color": "#243250",
+  "description": "Privacy-focused senior companion starter built with Pyodide and pyTincture.",
+  "icons": []
+}

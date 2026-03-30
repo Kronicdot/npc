@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#243250" />
+  <title>NPC Companion</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="styles.css" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/MaterialDesign-Webfont/7.4.47/css/materialdesignicons.css" rel="stylesheet" type="text/css">
+  <script>window.languagePluginUrl = 'https://cdn.jsdelivr.net/pyodide/v0.28.9/full/';</script>
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.28.0/full/pyodide.js"></script>
+  <script src="./assets/pytincture.js"></script>
+  <script>
+    const NPCStore = {
+      get(key, fallback) {
+        try {
+          const raw = localStorage.getItem(key);
+          return raw ? JSON.parse(raw) : fallback;
+        } catch (e) {
+          return fallback;
+        }
+      },
+      set(key, value) {
+        localStorage.setItem(key, JSON.stringify(value));
+      },
+      push(key, value) {
+        const data = NPCStore.get(key, []);
+        data.unshift(value);
+        NPCStore.set(key, data);
+      }
+    };
+
+    const NPCForms = {
+      saveReminder(event) {
+        event.preventDefault();
+        const form = event.target;
+        const data = new FormData(form);
+        const reminder = {
+          id: String(Date.now()),
+          title: data.get('title') || 'Reminder',
+          category: data.get('category') || 'General',
+          due: data.get('due') || '',
+          details: data.get('details') || '',
+          done: false,
+          created_at: new Date().toISOString()
+        };
+        NPCStore.push('npc_reminders', reminder);
+        form.reset();
+        if (window.npc_refresh_page) window.npc_refresh_page('reminders');
+        return false;
+      },
+      saveCheckin(event) {
+        event.preventDefault();
+        const form = event.target;
+        const data = new FormData(form);
+        const checkin = {
+          id: String(Date.now()),
+          mood: data.get('mood') || 'Okay',
+          took_meds: data.get('took_meds') === 'yes',
+          had_water: data.get('had_water') === 'yes',
+          note: data.get('note') || '',
+          created_at: new Date().toISOString()
+        };
+        NPCStore.push('npc_checkins', checkin);
+        form.reset();
+        if (window.npc_refresh_page) window.npc_refresh_page('checkin');
+        return false;
+      },
+      saveNote(event) {
+        event.preventDefault();
+        const form = event.target;
+        const data = new FormData(form);
+        const note = {
+          id: String(Date.now()),
+          title: data.get('title') || 'Quick Note',
+          body: data.get('body') || '',
+          created_at: new Date().toISOString()
+        };
+        NPCStore.push('npc_notes', note);
+        form.reset();
+        if (window.npc_refresh_page) window.npc_refresh_page('notes');
+        return false;
+      },
+      sendChat(event) {
+        event.preventDefault();
+        const form = event.target;
+        const data = new FormData(form);
+        const text = (data.get('message') || '').trim();
+        if (!text) return false;
+        const messages = NPCStore.get('npc_chat', []);
+        messages.unshift({ role: 'assistant', text: NPCOffline.reply(text), created_at: new Date().toISOString() });
+        messages.unshift({ role: 'user', text, created_at: new Date().toISOString() });
+        NPCStore.set('npc_chat', messages);
+        form.reset();
+        if (window.npc_refresh_page) window.npc_refresh_page('chat');
+        return false;
+      }
+    };
+
+    const NPCOffline = {
+      reply(text) {
+        const t = text.toLowerCase();
+        if (t.includes('sad') || t.includes('lonely') || t.includes('down')) {
+          return 'I am here with you. Let us take one gentle step: a glass of water, a slow breath, and one small thing you would like to do next.';
+        }
+        if (t.includes('medicine') || t.includes('med') || t.includes('pill')) {
+          return 'If this is about medicine, please check your reminder list and follow the plan your doctor gave you. You can also leave a note here so you remember what happened.';
+        }
+        if (t.includes('water') || t.includes('drink')) {
+          return 'A sip of water is a good idea. Small steady steps count.';
+        }
+        if (t.includes('forget') || t.includes('remember')) {
+          return 'Let us turn that into a note or reminder so you do not have to hold it all in your head.';
+        }
+        return 'Thank you for sharing that with me. I am here to help with today, one calm step at a time.';
+      }
+    };
+
+    function npcDeleteItem(key, id, page) {
+      const items = NPCStore.get(key, []).filter(item => item.id !== id);
+      NPCStore.set(key, items);
+      if (window.npc_refresh_page) window.npc_refresh_page(page);
+    }
+
+    function npcToggleReminder(id) {
+      const items = NPCStore.get('npc_reminders', []).map(item => {
+        if (item.id === id) item.done = !item.done;
+        return item;
+      });
+      NPCStore.set('npc_reminders', items);
+      if (window.npc_refresh_page) window.npc_refresh_page('reminders');
+    }
+
+    function applySettingsFromStorage() {
+      const settings = NPCStore.get('npc_settings', { largeText: true, highContrast: true });
+      document.body.classList.toggle('large-text', !!settings.largeText);
+      document.body.classList.toggle('high-contrast', !!settings.highContrast);
+      const lt = document.getElementById('setting-large-text');
+      const hc = document.getElementById('setting-high-contrast');
+      if (lt) lt.checked = !!settings.largeText;
+      if (hc) hc.checked = !!settings.highContrast;
+    }
+
+    function saveSettings() {
+      const settings = {
+        largeText: !!document.getElementById('setting-large-text')?.checked,
+        highContrast: !!document.getElementById('setting-high-contrast')?.checked
+      };
+      NPCStore.set('npc_settings', settings);
+      applySettingsFromStorage();
+      if (window.npc_refresh_page) window.npc_refresh_page('settings');
+    }
+
+    window.addEventListener('load', applySettingsFromStorage);
+  </script>
+</head>
+<body>
+  <div id="maindiv" style="width:100%; height:100vh;"></div>
+
+  <script type="text/json" id="micropip-libs">["dhxpyt"]</script>
+
+  <script type="text/python">
+import json
+import js
+from pyodide.ffi import create_proxy
+from dhxpyt.layout import MainWindow, LayoutConfig, CellConfig
+from dhxpyt.sidebar import SidebarConfig, NavItemConfig, SpacerConfig
+
+
+def get_store(key, fallback):
+    raw = js.window.localStorage.getItem(key)
+    if not raw or raw == "null":
+        return fallback
+    try:
+        return json.loads(raw)
+    except Exception:
+        return fallback
+
+
+def esc(text):
+    return (str(text)
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace('"', '&quot;'))
+
+
+def fmt_dt(iso_str):
+    if not iso_str:
+        return "No time set"
+    try:
+        return iso_str.replace("T", " ")[:16]
+    except Exception:
+        return iso_str
+
+
+class NPCApp(MainWindow):
+    def __init__(self):
+        super().__init__()
+        self.current_page = "today"
+        self.set_theme("light")
+        self._build_shell()
+        self.show_page("today")
+
+    def _build_shell(self):
+        self.base_layout = self.add_layout(
+            layout_config=LayoutConfig(
+                type="line",
+                cols=[
+                    CellConfig(id="nav", width="280px"),
+                    CellConfig(id="main", width="80%")
+                ]
+            )
+        )
+        self.sidebar = self.base_layout.add_sidebar(
+            id="nav",
+            sidebar_config=SidebarConfig(data=[
+                NavItemConfig(id="today", value="Today", icon="mdi mdi-home-heart"),
+                NavItemConfig(id="checkin", value="Daily Check-In", icon="mdi mdi-emoticon-happy-outline"),
+                NavItemConfig(id="reminders", value="Reminders", icon="mdi mdi-bell-ring-outline"),
+                NavItemConfig(id="notes", value="Notes", icon="mdi mdi-note-text-outline"),
+                NavItemConfig(id="chat", value="Companion Chat", icon="mdi mdi-chat-processing-outline"),
+                SpacerConfig(),
+                NavItemConfig(id="settings", value="Settings", icon="mdi mdi-cog-outline")
+            ])
+        )
+        self.sidebar.on_click(self._handle_nav)
+        self.content = self.base_layout.add_layout(
+            id="main",
+            layout_config=LayoutConfig(
+                type="line",
+                rows=[
+                    CellConfig(id="hero", height="auto"),
+                    CellConfig(id="body", height="100%")
+                ]
+            )
+        )
+
+    def _handle_nav(self, item_id, event=None):
+        self.show_page(item_id)
+
+    def show_page(self, page_id):
+        self.current_page = page_id
+        method = getattr(self, f"render_{page_id}", None)
+        if method:
+            method()
+
+    def render_hero(self, title, subtitle=""):
+        self.content.attach_html(
+            id="hero",
+            html=f"""
+            <div class='hero-wrap'>
+              <div>
+                <h1>{esc(title)}</h1>
+                <p>{esc(subtitle)}</p>
+              </div>
+            </div>
+            """
+        )
+
+    def render_today(self):
+        reminders = get_store("npc_reminders", [])
+        notes = get_store("npc_notes", [])
+        checkins = get_store("npc_checkins", [])
+        open_reminders = [r for r in reminders if not r.get("done")]
+        upcoming = open_reminders[:3]
+        latest_checkin = checkins[0] if checkins else None
+        due_text = f"{len(open_reminders)} reminder(s) waiting" if open_reminders else "No reminders waiting right now"
+        if latest_checkin:
+            mood = esc(latest_checkin.get('mood', 'Okay'))
+            meds = 'Taken' if latest_checkin.get('took_meds') else 'Not marked'
+            water = 'Had water' if latest_checkin.get('had_water') else 'Not marked'
+            checkin_text = f"Latest check-in: {mood}. Medication: {meds}. Water: {water}."
+        else:
+            checkin_text = "You have not done a check-in yet today."
+        reminder_cards = "".join([
+            f"""
+            <div class='reminder-mini'>
+              <h3>{esc(r.get('title','Reminder'))}</h3>
+              <p><strong>{esc(r.get('category','General'))}</strong></p>
+              <p>{esc(fmt_dt(r.get('due','')))}</p>
+              <p>{esc(r.get('details','')) or 'No extra details.'}</p>
+            </div>
+            """
+            for r in upcoming
+        ]) or "<div class='empty-state'><strong>No reminders yet.</strong><p>Add one from the Reminders page when you are ready.</p></div>"
+        self.render_hero("Nurturing Personal Companion", "A simple home screen with big actions and easy daily support.")
+        self.content.attach_html(id="body", html=f"""
+        <div class='page-wrap'>
+          <div class='today-stack'>
+            <div class='card highlight'>
+              <h2>Today</h2>
+              <p class='info-line'>{due_text}</p>
+              <p class='info-line'>{checkin_text}</p>
+            </div>
+
+            <div class='big-actions'>
+              <button class='big-action' onclick="window.npc_refresh_page('checkin')">
+                <strong>Daily Check-In</strong>
+                <span>Answer a few simple questions about your day.</span>
+              </button>
+              <button class='big-action' onclick="window.npc_refresh_page('reminders')">
+                <strong>Reminders</strong>
+                <span>See reminders, mark them done, or add a new one.</span>
+              </button>
+              <button class='big-action' onclick="window.npc_refresh_page('notes')">
+                <strong>Notes</strong>
+                <span>Save something important so you can find it later.</span>
+              </button>
+              <button class='big-action' onclick="window.npc_refresh_page('chat')">
+                <strong>Companion Chat</strong>
+                <span>Talk to the companion in a calm, simple space.</span>
+              </button>
+            </div>
+
+            <div class='status-grid'>
+              <div class='status-tile'>
+                <strong>{len(open_reminders)}</strong>
+                Reminders to do
+              </div>
+              <div class='status-tile'>
+                <strong>{len(notes)}</strong>
+                Notes saved
+              </div>
+              <div class='status-tile'>
+                <strong>{len(checkins)}</strong>
+                Check-ins saved
+              </div>
+            </div>
+
+            <div class='card'>
+              <h2>Next reminders</h2>
+              <div class='grid three-up'>
+                {reminder_cards}
+              </div>
+            </div>
+          </div>
+        </div>
+        """)
+
+    def render_checkin(self):
+        checkins = get_store("npc_checkins", [])[:5]
+        history = "".join([
+            f"<div class='list-item'><strong>{esc(c.get('mood','Okay'))}</strong> · Meds: {'Yes' if c.get('took_meds') else 'No'} · Water: {'Yes' if c.get('had_water') else 'No'}<br><span>{esc(fmt_dt(c.get('created_at','')))}</span><p>{esc(c.get('note',''))}</p></div>"
+            for c in checkins
+        ]) or "<div class='list-item'>No check-ins yet.</div>"
+        self.render_hero("Daily Check-In", "A gentle daily check on mood, medication, hydration, and notes.")
+        self.content.attach_html(id="body", html=f"""
+        <div class='page-wrap'>
+          <div class='grid two-up'>
+            <div class='card'>
+              <h2>How are you doing today?</h2>
+              <form onsubmit="return NPCForms.saveCheckin(event)">
+                <label>Mood</label>
+                <select name='mood'>
+                  <option>Great</option>
+                  <option>Okay</option>
+                  <option>Tired</option>
+                  <option>Worried</option>
+                  <option>Sad</option>
+                </select>
+                <label>Did you take your medication?</label>
+                <select name='took_meds'>
+                  <option value='yes'>Yes</option>
+                  <option value='no'>No</option>
+                </select>
+                <label>Have you had water recently?</label>
+                <select name='had_water'>
+                  <option value='yes'>Yes</option>
+                  <option value='no'>No</option>
+                </select>
+                <label>Leave a short note</label>
+                <textarea name='note' rows='5' placeholder='Anything you want to remember about today'></textarea>
+                <button class='npc-btn' type='submit'>Save Check-In</button>
+              </form>
+            </div>
+            <div class='card'>
+              <h2>Recent check-ins</h2>
+              {history}
+            </div>
+          </div>
+        </div>
+        """)
+
+    def render_reminders(self):
+        reminders = get_store("npc_reminders", [])
+        cards = "".join([
+            f"""
+            <div class='card small-card {'done-card' if r.get('done') else ''}'>
+              <h3>{esc(r.get('title','Reminder'))}</h3>
+              <p>{esc(r.get('category','General'))}</p>
+              <p>{esc(fmt_dt(r.get('due','')))}</p>
+              <p>{esc(r.get('details',''))}</p>
+              <div class='card-actions'>
+                <button class='npc-btn secondary' onclick="npcToggleReminder('{esc(r.get('id',''))}')">{'Mark Not Done' if r.get('done') else 'Mark Done'}</button>
+                <button class='npc-btn danger' onclick="npcDeleteItem('npc_reminders', '{esc(r.get('id',''))}', 'reminders')">Delete</button>
+              </div>
+            </div>
+            """ for r in reminders
+        ]) or "<div class='card small-card'><h3>No reminders yet</h3><p>Add your first reminder using the form.</p></div>"
+        self.render_hero("Reminders", "Medication, hydration, and daily routine reminders.")
+        self.content.attach_html(id="body", html=f"""
+        <div class='page-wrap'>
+          <div class='grid two-up'>
+            <div class='card'>
+              <h2>Add reminder</h2>
+              <form onsubmit="return NPCForms.saveReminder(event)">
+                <label>Title</label>
+                <input name='title' placeholder='Take morning medication' required />
+                <label>Category</label>
+                <select name='category'>
+                  <option>Medication</option>
+                  <option>Hydration</option>
+                  <option>Appointment</option>
+                  <option>Routine</option>
+                  <option>General</option>
+                </select>
+                <label>Due</label>
+                <input type='datetime-local' name='due' />
+                <label>Details</label>
+                <textarea name='details' rows='4' placeholder='Optional details'></textarea>
+                <button class='npc-btn' type='submit'>Save Reminder</button>
+              </form>
+            </div>
+            <div class='card'>
+              <h2>Your reminders</h2>
+              <div class='grid two-up'>{cards}</div>
+            </div>
+          </div>
+        </div>
+        """)
+
+    def render_notes(self):
+        notes = get_store("npc_notes", [])
+        items = "".join([
+            f"<div class='list-item'><strong>{esc(n.get('title','Quick Note'))}</strong><br><span>{esc(fmt_dt(n.get('created_at','')))}</span><p>{esc(n.get('body',''))}</p><button class='npc-btn danger' onclick=\"npcDeleteItem('npc_notes', '{esc(n.get('id',''))}', 'notes')\">Delete</button></div>"
+            for n in notes
+        ]) or "<div class='list-item'>No notes saved yet.</div>"
+        self.render_hero("Notes", "Quick memory support with simple local notes.")
+        self.content.attach_html(id="body", html=f"""
+        <div class='page-wrap'>
+          <div class='grid two-up'>
+            <div class='card'>
+              <h2>Add note</h2>
+              <form onsubmit="return NPCForms.saveNote(event)">
+                <label>Title</label>
+                <input name='title' placeholder='Doctor question' />
+                <label>Note</label>
+                <textarea name='body' rows='8' placeholder='Write something helpful to remember'></textarea>
+                <button class='npc-btn' type='submit'>Save Note</button>
+              </form>
+            </div>
+            <div class='card'>
+              <h2>Saved notes</h2>
+              {items}
+            </div>
+          </div>
+        </div>
+        """)
+
+    def render_chat(self):
+        chat = get_store("npc_chat", [])[:10]
+        items = "".join([
+            f"<div class='chat-bubble {'assistant' if m.get('role')=='assistant' else 'user'}'><strong>{'NPC' if m.get('role')=='assistant' else 'You'}</strong><p>{esc(m.get('text',''))}</p></div>"
+            for m in reversed(chat)
+        ]) or "<div class='chat-bubble assistant'><strong>NPC</strong><p>Hello. I am here with you. You can tell me how you are feeling, or ask me to help remember something.</p></div>"
+        self.render_hero("Companion Chat", "Offline supportive responses for the starter version.")
+        self.content.attach_html(id="body", html=f"""
+        <div class='page-wrap'>
+          <div class='card'>
+            <h2>Talk with NPC</h2>
+            <div class='chat-wrap'>{items}</div>
+            <form onsubmit="return NPCForms.sendChat(event)">
+              <label>Message</label>
+              <textarea name='message' rows='4' placeholder='I feel tired today, or remind me to ask my doctor about something'></textarea>
+              <button class='npc-btn' type='submit'>Send</button>
+            </form>
+          </div>
+        </div>
+        """)
+
+    def render_settings(self):
+        settings = get_store("npc_settings", {"largeText": True, "highContrast": True})
+        self.render_hero("Settings", "Accessibility, privacy, and display options.")
+        self.content.attach_html(id="body", html=f"""
+        <div class='page-wrap'>
+          <div class='grid two-up'>
+            <div class='card'>
+              <h2>Accessibility</h2>
+              <div class='setting-row'>
+                <label for='setting-large-text'>Large text</label>
+                <input id='setting-large-text' type='checkbox' {'checked' if settings.get('largeText', True) else ''} />
+              </div>
+              <div class='setting-row'>
+                <label for='setting-high-contrast'>High contrast</label>
+                <input id='setting-high-contrast' type='checkbox' {'checked' if settings.get('highContrast', True) else ''} />
+              </div>
+              <button class='npc-btn' onclick='saveSettings()'>Save Settings</button>
+            </div>
+            <div class='card'>
+              <h2>Privacy notes</h2>
+              <p>This starter stores reminders, notes, check-ins, and chat history locally in your browser storage. A future online AI mode should use a secure relay instead of storing API keys in the browser.</p>
+            </div>
+          </div>
+        </div>
+        """)
+
+npc_app = NPCApp()
+js.window.npc_refresh_page = create_proxy(lambda page=None: npc_app.show_page(page if page else npc_app.current_page))
+  </script>
+
+  <script>
+    runTinctureApp('.', 'dhxpyt', 'index.html');
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js'));
+    }
+  </script>
+</body>
+</html>
